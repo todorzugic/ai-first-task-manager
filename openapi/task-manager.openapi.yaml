@@ -1,0 +1,169 @@
+openapi: 3.1.0
+info:
+  title: AI-First Task Manager API (Worker → GAS)
+  version: "4.0"
+
+servers:
+  - url: https://little-art-1623.zugictodor.workers.dev
+
+paths:
+  /health:
+    get:
+      operationId: health
+      summary: Health check
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, default: "json" }
+      responses:
+        "200": { description: OK }
+
+  /tasks:
+    get:
+      operationId: listTasks
+      summary: List tasks
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, default: "json" }
+        - in: query
+          name: status
+          required: false
+          schema: { type: string, example: "ACTIVE" }
+        - in: query
+          name: q
+          required: false
+          schema: { type: string, example: "tax" }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, example: 50 }
+      responses:
+        "200": { description: OK }
+
+    post:
+      operationId: createTask
+      summary: Create task (idempotent via requestId)
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, default: "json" }
+        - in: query
+          name: idempotencyKey
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId, title]
+              properties:
+                requestId: { type: string }
+                title: { type: string }
+                notes: { type: string }
+                priority: { type: integer, minimum: 1, maximum: 5 }
+                effortMins: { type: integer }
+                tags:
+                  oneOf:
+                    - type: array
+                      items: { type: string }
+                    - type: string
+                startAt: { type: string }
+                dueAt: { type: string }
+                contextDays:
+                  oneOf:
+                    - type: array
+                      items: { type: string }
+                    - type: string
+                contextTimes:
+                  oneOf:
+                    - type: array
+                      items: { type: string }
+                    - type: string
+                source: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /tasks/next:
+    get:
+      operationId: getNextTask
+      summary: Get best next task
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, default: "json" }
+        - in: query
+          name: now
+          required: false
+          schema:
+            type: string
+            description: Optional ISO time for deterministic demos
+            example: "2026-01-22T09:30:00+01:00"
+      responses:
+        "200": { description: OK }
+
+  /tasks/{taskId}/complete:
+    post:
+      operationId: completeTask
+      summary: Mark a task complete (idempotent via requestId)
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, default: "json" }
+        - in: query
+          name: idempotencyKey
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId]
+              properties:
+                requestId: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /tasks/{taskId}/snooze:
+    post:
+      operationId: snoozeTask
+      summary: Snooze a task until a time (idempotent via requestId)
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, default: "json" }
+        - in: query
+          name: idempotencyKey
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId, until]
+              properties:
+                requestId: { type: string }
+                until: { type: string, example: "2026-01-22T13:00:00+01:00" }
+                reason: { type: string }
+      responses:
+        "200": { description: OK }
